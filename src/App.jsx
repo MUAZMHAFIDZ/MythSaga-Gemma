@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import genAI from "./config/gemini";
 import { rollDice, randomEncounter } from "./utils/dice";
 import {
@@ -35,6 +35,12 @@ const App = () => {
     monsters: [],
     npcs: [],
   });
+  const [loading, setLoading] = useState(false);
+  const [gameOver, setGameOver] = useState(false);
+  const [battleOutcome, setBattleOutcome] = useState(null);
+  const [nextVisibleEncounter, setNextVisibleEncounter] = useState(null);
+
+  const turnCount = useRef(0);
 
   useEffect(() => {
     if (character && history.length === 0) {
@@ -42,21 +48,64 @@ const App = () => {
     }
   }, [character]);
 
+  const simulateBattle = () => {
+    const chance = Math.random();
+    if (chance < 0.2) return "lose"; // 3/10 kalah
+    if (chance < 0.7) return "escape"; // 4/10 kabur
+    return "win"; // 3/10 menang
+  };
+
   const handleStart = async (choice) => {
+    if (gameOver) return;
+
     const dice = rollDice(20);
     let newLoc = location;
     if (dice < 2) newLoc = Math.max(0, location - 1);
     else if (dice < 5) newLoc = location + 1;
     setLocation(newLoc);
 
+    turnCount.current += 1;
+
+    let currentEncounter = encounter;
+    let outcome = null;
+
+    const randomChance = Math.random();
+    const shouldClearEncounter =
+      turnCount.current % 5 === 0 ||
+      (turnCount.current < 5 && randomChance < 0.3);
+
+    if (shouldClearEncounter) {
+      currentEncounter = { monsters: [], npcs: [] };
+      setEncounter(currentEncounter);
+      setVisibleEncounter(currentEncounter);
+    }
+
+    // Simulasi battle hanya jika ada monster
+    if (currentEncounter.monsters.length > 0) {
+      outcome = simulateBattle();
+      setBattleOutcome(outcome);
+
+      if (outcome === "lose") {
+        setGameOver(true);
+        return;
+      }
+
+      // Jika menang atau kabur, tetap generate prompt
+      const newEncounter = randomEncounter(monsters, npcs);
+      setEncounter(newEncounter);
+      setVisibleEncounter(newEncounter);
+    } else {
+      setBattleOutcome(null); // reset jika tidak ada battle
+    }
+
     const player = `${character.name} the ${character.race} ${character.class}`;
     const spell = classSpells[character.class]?.[0] || "basic spell";
     const weapon = classWeapons[character.class] || "sword";
 
-    const monsterText = encounter.monsters
+    const monsterText = currentEncounter.monsters
       .map((m) => `${m.name} (${m.difficulty})`)
       .join(", ");
-    const npcText = encounter.npcs
+    const npcText = currentEncounter.npcs
       .map((n) => `${n.name} (${n.trait})`)
       .join(", ");
 
@@ -79,12 +128,15 @@ Current Encounter:
 - Monsters: ${monsterText || "None"}
 - NPCs: ${npcText || "None"}
 
+${outcome === "win" ? "The player has just defeated the monster." : ""}
+${outcome === "escape" ? "The player has just escaped from the monster." : ""}
+
 If the player defeats the monster or escapes from danger, or the NPC finishes interaction and leaves, write "End Turn" at the end.
 Do not continue the story from previous messages. Only respond to current situation and last choice: "${choice}".
 `;
 
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemma-3-27b-it" });
       const result = await model.generateContent({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
       });
@@ -99,22 +151,26 @@ Do not continue the story from previous messages. Only respond to current situat
         lowerText.includes("defeated") ||
         lowerText.includes("killed");
 
-      const noEncounter =
-        encounter.monsters.length === 0 && encounter.npcs.length === 0;
-
       let newEncounter = encounter;
-      if (ended || noEncounter) {
+      if (
+        ended ||
+        (encounter.monsters.length === 0 && encounter.npcs.length === 0)
+      ) {
         newEncounter = randomEncounter(monsters, npcs);
-        console.log("🎲 New Encounter:", newEncounter);
         setEncounter(newEncounter);
       }
+
+      if (nextVisibleEncounter) {
+        setVisibleEncounter(nextVisibleEncounter);
+        setNextVisibleEncounter(null);
+      }
+      setNextVisibleEncounter(newEncounter);
 
       setHistory([
         { role: "user", content: choice },
         { role: "ai", content: text },
       ]);
       setOptions(opts);
-      setVisibleEncounter(newEncounter);
     } catch (err) {
       console.error("Gemini Error:", err);
       setHistory([
@@ -124,6 +180,21 @@ Do not continue the story from previous messages. Only respond to current situat
       setOptions([]);
     }
   };
+
+  if (gameOver) {
+    return (
+      <div className="text-center p-10">
+        <h1 className="text-3xl font-bold text-red-600 mb-4">💀 Game Over</h1>
+        <p className="text-gray-700 mb-4">You died in battle.</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="bg-blue-600 text-white px-6 py-2 rounded"
+        >
+          Ulangi
+        </button>
+      </div>
+    );
+  }
 
   if (!lang)
     return (
@@ -158,7 +229,8 @@ Do not continue the story from previous messages. Only respond to current situat
               characterForm.class
             ) {
               setCharacter(characterForm);
-              setEncounter(randomEncounter(monsters, npcs)); // awal encounter
+              setEncounter(randomEncounter(monsters, npcs));
+              turnCount.current = 1;
             }
           }}
         >
@@ -200,10 +272,7 @@ Do not continue the story from previous messages. Only respond to current situat
 
           <button
             type="submit"
-            disabled={
-              !characterForm.name || !characterForm.race || !characterForm.class
-            }
-            className="bg-blue-600 text-white px-4 py-2 rounded disabled:bg-gray-300"
+            className="bg-blue-600 text-white px-4 py-2 rounded"
           >
             Start Adventure
           </button>
@@ -257,12 +326,25 @@ Do not continue the story from previous messages. Only respond to current situat
           ))}
       </section>
 
-      {options.length > 0 && (
+      {loading && (
+        <div className="text-center text-gray-500 animate-pulse">
+          Loading... Please wait (cooldown)
+        </div>
+      )}
+
+      {!loading && options.length > 0 && (
         <div className="mt-4 space-y-2">
           {options.map((opt, i) => (
             <button
               key={i}
-              onClick={() => handleStart(opt)}
+              onClick={() => {
+                setLoading(true);
+                setOptions([]);
+                setTimeout(() => {
+                  handleStart(opt);
+                  setLoading(false);
+                }, 5000);
+              }}
               className="w-full border px-3 py-2 rounded hover:bg-blue-50"
             >
               {opt}
