@@ -24,8 +24,8 @@ dist-ssr
 *.sln
 *.sw?
 
-/public/monsters/*
-!/public/monsters/.gitkeep
+/public/assets/monsters/*
+!/public/assets/monsters/.gitkeep
 
-/public/npc/*
-!/public/npc/.gitkeep
+/public/assets/npc/*
+!/public/assets/npc/.gitkeep
