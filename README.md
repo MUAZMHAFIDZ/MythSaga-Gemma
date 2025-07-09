@@ -40,12 +40,15 @@ npm run dev
 
 ```bash
 /public
-  /monsters
-    goblin.png
-    dragon.png
-  /npc
-    merchant.png
-    healer.png
+  /assets
+    /monsters
+      goblin.png
+      dragon.png
+      ...
+    /npc
+      merchant.png
+      healer.png
+      ...
 ```
 
 ## 📄 Lisensi & Author
