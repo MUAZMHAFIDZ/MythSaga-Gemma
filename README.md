@@ -1,12 +1,55 @@
-# React + Vite
+# 🧙‍♂️ MythSaga Gemma
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**MythSaga Gemma** adalah game _text-based RPG_ interaktif yang digerakkan oleh AI, memanfaatkan kekuatan model **Gemini/Gemma** untuk menciptakan petualangan fantasi yang unik di setiap giliran.
 
-Currently, two official plugins are available:
+🚪 Jelajahi dunia yang dinamis  
+⚔️ Hadapi monster berbahaya  
+🤝 Berinteraksi dengan NPC  
+🧠 Dan buat keputusan yang membentuk alur cerita!
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## Expanding the ESLint configuration
+## ✨ Fitur Utama
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- 🎲 **Sistem Encounter Dinamis** — Monster dan NPC muncul secara acak dengan kemungkinan interaksi dan pertempuran.
+- 🧠 **AI Dungeon Master** — Cerita dikendalikan sepenuhnya oleh AI menggunakan model Gemini/Gemma.
+- ⏱️ **Turn-Based Adventure** — Pilihan pemain menentukan alur dan hasil cerita.
+- ⚠️ **Kemungkinan Kalah atau Kabur** — Setiap pertempuran memiliki risiko, termasuk _game over_!
+- 🌐 **Multi-bahasa** — Pilih antara Bahasa Indonesia atau English saat memulai permainan.
+- 🖼️ **Gambar Karakter & Musuh** — Disajikan dengan visual dari folder publik.
+
+---
+
+## 📦 Teknologi
+
+- React + Vite
+- Gemini/Gemma 3 (via API)
+- Tailwind CSS
+- Encounter modular (monster, npc, spells, weapons)
+
+---
+
+## 🚀 Cara Jalankan
+
+```bash
+npm install
+npm run dev
+```
+
+## 🚀 Assets gambar
+
+```bash
+/public
+  /monsters
+    goblin.png
+    dragon.png
+  /npc
+    merchant.png
+    healer.png
+```
+
+## 📄 Lisensi & Author
+
+- 📜 License: [MIT](https://opensource.org/licenses/MIT)  
+  ![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)
+- 🧑 Author: **Muaz M Hafidz**
