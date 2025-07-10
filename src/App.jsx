@@ -63,13 +63,18 @@ const App = () => {
   });
   const [loading, setLoading] = useState(false);
   const [gameOver, setGameOver] = useState(false);
-  const [battleOutcome, setBattleOutcome] = useState(null);
-  const [nextVisibleEncounter, setNextVisibleEncounter] = useState(null);
   const turnCount = useRef(0);
+
+  const [encounterTurnAge, setEncounterTurnAge] = useState(1);
+  const [prevEncounter, setPrevEncounter] = useState(null);
+
+  useEffect(() => {
+    setVisibleEncounter(encounter);
+  }, [encounter]);
 
   useEffect(() => {
     if (character && history.length === 0) {
-      handleStart("Let's begin.");
+      setTimeout(() => handleStart("Let's begin."), 500);
     }
   }, [character]);
 
@@ -81,7 +86,10 @@ const App = () => {
   };
 
   const handleStart = async (choice) => {
-    if (gameOver) return;
+    if (gameOver || loading) return;
+
+    setLoading(true);
+    setOptions([]);
 
     const dice = rollDice(20);
     let newLoc = location;
@@ -91,44 +99,25 @@ const App = () => {
 
     turnCount.current += 1;
 
-    let currentEncounter = encounter;
     let outcome = null;
 
-    const randomChance = Math.random();
-    const shouldClearEncounter =
-      turnCount.current % 5 === 0 ||
-      (turnCount.current < 5 && randomChance < 0.2);
-
-    if (shouldClearEncounter) {
-      currentEncounter = { monsters: [], npcs: [] };
-      setEncounter(currentEncounter);
-      setVisibleEncounter(currentEncounter);
-    }
-
-    if (turnCount.current > 2 && currentEncounter.monsters.length > 0) {
+    if (turnCount.current >= 3 && encounter.monsters.length > 0) {
       outcome = simulateBattle();
-      setBattleOutcome(outcome);
-
       if (outcome === "lose") {
         setGameOver(true);
+        setLoading(false);
         return;
       }
-
-      const newEncounter = randomEncounter(monsters, npcs);
-      setEncounter(newEncounter);
-      setVisibleEncounter(newEncounter);
-    } else {
-      setBattleOutcome(null);
     }
 
     const player = `${character.name} the ${character.race} ${character.class}`;
     const spell = classSpells[character.class]?.[0] || "basic spell";
     const weapon = classWeapons[character.class] || "sword";
 
-    const monsterText = currentEncounter.monsters
+    const monsterText = encounter.monsters
       .map((m) => `${m.name} (${m.difficulty})`)
       .join(", ");
-    const npcText = currentEncounter.npcs
+    const npcText = encounter.npcs
       .map((n) => `${n.name} (${n.trait})`)
       .join(", ");
 
@@ -173,21 +162,24 @@ Do not continue the story from previous messages. Only respond to current situat
         lowerText.includes("defeated") ||
         lowerText.includes("killed");
 
-      let newEncounter = encounter;
-      if (
-        ended ||
-        (encounter.monsters.length === 0 && encounter.npcs.length === 0)
-      ) {
+      let newEncounter = { ...encounter };
+
+      if (encounterTurnAge < 4) {
+        newEncounter = encounter;
+        setEncounterTurnAge((age) => age + 1);
+      } else if (encounterTurnAge >= 6) {
+        newEncounter = { monsters: [], npcs: [] };
+        setEncounterTurnAge(0);
+      } else if (Math.random() < 0.5 || ended) {
         newEncounter = randomEncounter(monsters, npcs);
-        setEncounter(newEncounter);
+        setEncounterTurnAge(1);
+      } else {
+        newEncounter = encounter;
+        setEncounterTurnAge((age) => age + 1);
       }
 
-      if (nextVisibleEncounter) {
-        setVisibleEncounter(nextVisibleEncounter);
-        setNextVisibleEncounter(null);
-      }
-      setNextVisibleEncounter(newEncounter);
-
+      setPrevEncounter(encounter);
+      setEncounter(newEncounter);
       setHistory([
         { role: "user", content: choice },
         { role: "ai", content: text },
@@ -201,6 +193,17 @@ Do not continue the story from previous messages. Only respond to current situat
       ]);
       setOptions([]);
     }
+
+    setTimeout(() => {
+      setLoading(false);
+    }, 8000);
+  };
+
+  const handleOptionClick = async (opt) => {
+    setLoading(true);
+    setOptions([]);
+    await handleStart(opt);
+    setTimeout(() => setLoading(false), 8000);
   };
 
   if (gameOver) {
@@ -213,7 +216,7 @@ Do not continue the story from previous messages. Only respond to current situat
             onClick={() => window.location.reload()}
             className="bg-red-700 hover:bg-red-800 text-white px-6 py-2 rounded-lg shadow"
           >
-            Ulangi
+            Retry
           </button>
         </div>
       </div>
@@ -259,6 +262,7 @@ Do not continue the story from previous messages. Only respond to current situat
               ) {
                 setCharacter(characterForm);
                 setEncounter(randomEncounter(monsters, npcs));
+                setEncounterTurnAge(1);
                 turnCount.current = 1;
               }
             }}
@@ -268,10 +272,7 @@ Do not continue the story from previous messages. Only respond to current situat
               placeholder="Enter your name"
               value={characterForm.name}
               onChange={(e) =>
-                setCharacterForm((prev) => ({
-                  ...prev,
-                  name: e.target.value,
-                }))
+                setCharacterForm((prev) => ({ ...prev, name: e.target.value }))
               }
             />
             <select
@@ -290,7 +291,10 @@ Do not continue the story from previous messages. Only respond to current situat
               className="w-full bg-stone-800 text-white px-3 py-2 rounded border border-stone-500"
               value={characterForm.class}
               onChange={(e) =>
-                setCharacterForm((prev) => ({ ...prev, class: e.target.value }))
+                setCharacterForm((prev) => ({
+                  ...prev,
+                  class: e.target.value,
+                }))
               }
             >
               <option value="">Select Class</option>
@@ -298,7 +302,6 @@ Do not continue the story from previous messages. Only respond to current situat
                 <option key={c}>{c}</option>
               ))}
             </select>
-
             <button
               type="submit"
               className="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold px-4 py-2 rounded shadow"
@@ -372,15 +375,11 @@ Do not continue the story from previous messages. Only respond to current situat
             {options.map((opt, i) => (
               <button
                 key={i}
-                onClick={() => {
-                  setLoading(true);
-                  setOptions([]);
-                  setTimeout(() => {
-                    handleStart(opt);
-                    setLoading(false);
-                  }, 5000);
-                }}
-                className="w-full bg-stone-800 hover:bg-stone-700 text-white border border-yellow-700 px-4 py-2 rounded-lg shadow transition-all duration-300"
+                onClick={() => handleOptionClick(opt)}
+                disabled={loading}
+                className={`w-full bg-stone-800 hover:bg-stone-700 text-white border border-yellow-700 px-4 py-2 rounded-lg shadow transition-all duration-300 ${
+                  loading ? "opacity-50 cursor-not-allowed" : ""
+                }`}
               >
                 {opt}
               </button>
