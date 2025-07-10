@@ -2,7 +2,7 @@ export const races = ["Human", "Elf", "Orc", "Dwarf"];
 export const classes = ["Wizard", "Rogue", "Warrior", "Cleric"];
 
 export const classSpells = {
-  Wizard: ["Fireball", "Ice Shard"],
+  Wizard: ["Fireball", "Ice Shard", "Chain Lightning"],
   Rogue: ["Backstab", "Smoke Bomb"],
   Warrior: ["Slash", "Bash"],
   Cleric: ["Heal", "Bless"],

@@ -50,9 +50,9 @@ const App = () => {
 
   const simulateBattle = () => {
     const chance = Math.random();
-    if (chance < 0.2) return "lose"; // 3/10 kalah
-    if (chance < 0.7) return "escape"; // 4/10 kabur
-    return "win"; // 3/10 menang
+    if (chance < 0.1) return "lose";
+    if (chance < 0.6) return "escape";
+    return "win";
   };
 
   const handleStart = async (choice) => {
@@ -72,7 +72,7 @@ const App = () => {
     const randomChance = Math.random();
     const shouldClearEncounter =
       turnCount.current % 5 === 0 ||
-      (turnCount.current < 5 && randomChance < 0.3);
+      (turnCount.current < 5 && randomChance < 0.2);
 
     if (shouldClearEncounter) {
       currentEncounter = { monsters: [], npcs: [] };
@@ -80,8 +80,8 @@ const App = () => {
       setVisibleEncounter(currentEncounter);
     }
 
-    // Simulasi battle hanya jika ada monster
-    if (currentEncounter.monsters.length > 0) {
+    // Battle simulation
+    if (turnCount.current > 2 && currentEncounter.monsters.length > 0) {
       outcome = simulateBattle();
       setBattleOutcome(outcome);
 
@@ -90,12 +90,12 @@ const App = () => {
         return;
       }
 
-      // Jika menang atau kabur, tetap generate prompt
+      // if win or escape
       const newEncounter = randomEncounter(monsters, npcs);
       setEncounter(newEncounter);
       setVisibleEncounter(newEncounter);
     } else {
-      setBattleOutcome(null); // reset jika tidak ada battle
+      setBattleOutcome(null); // reset if no battle
     }
 
     const player = `${character.name} the ${character.race} ${character.class}`;
