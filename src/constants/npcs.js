@@ -323,4 +323,10 @@ export const npcs = [
     trait: "silent",
     image: "/assets/npcs/rokk.webp",
   },
+  {
+    id: "god_of_despair",
+    name: "Muaz, God of Despair",
+    trait: "invincible and undefeatable",
+    image: "/assets/special/muaz.webp",
+  },
 ];
